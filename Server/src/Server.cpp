@@ -1,9 +1,9 @@
 #include "include/Server.h"
 #include <iostream>
 
-void Server::Listen(u_short PORT) {
+void Server::Listen(const WCHAR* IPAddress, u_short PORT) {
 	CreateSocket();
-	CreateSocketAddress(PORT);
+	CreateSocketAddress(IPAddress, PORT);
 	BindAddressToSocket();
 
 	if (listen(Socket, SOMAXCONN) == SOCKET_ERROR) {
@@ -12,6 +12,40 @@ void Server::Listen(u_short PORT) {
 	}
 
 	std::cout << "Server Started Listening On Port : " << PORT << std::endl;
+}
+
+SOCKET Server::AcceptClient() {
+	SOCKET ClientSocket = accept(Socket, nullptr, nullptr);
+
+	if (ClientSocket == INVALID_SOCKET) {
+		std::cout << "Accepting Client failed..." << std::endl;
+		return -1;
+	}
+
+	//TO-Do : Get Client Name
+	ActiveClients.emplace_back(ClientSocket);
+
+	return ActiveClients.back();
+}
+
+void Server::CloseClient(SOCKET Client) {
+	auto it = std::find(ActiveClients.begin(), ActiveClients.end(), Client);
+	ActiveClients.erase(it);
+}
+
+bool Server::ReceiveMessage(SOCKET Client) {
+	char Buffer[4096];
+	int BytesReceived = recv(Client, Buffer, sizeof(Buffer), 0);
+	std::cout<<"Bytes : " << BytesReceived << std::endl;
+	if (BytesReceived < 0) {
+		std::cout << "Error Receiving Message..."<<std::endl;
+		return false;
+	}
+
+	std::string Message(Buffer, BytesReceived);
+	std::cout<<Message<<std::endl;
+	CloseProgram();
+	return true;
 }
 
 void Server::CreateSocket() {
@@ -23,12 +57,12 @@ void Server::CreateSocket() {
 	}
 }
 
-void Server::CreateSocketAddress(u_short PORT) {
+void Server::CreateSocketAddress(const WCHAR* IPAddress, u_short PORT) {
 	SocketAddress.sin_family = AF_INET;
 	SocketAddress.sin_port = htons(PORT);
 
 	//Filling IP Address
-	if (InetPton(AF_INET, _T("0.0.0.0"), &SocketAddress.sin_addr) != 1) {
+	if (InetPton(AF_INET, IPAddress, &SocketAddress.sin_addr) != 1) {
 		std::cout << "Setting IP Address failed..." << std::endl;
 		CloseProgram();
 	}

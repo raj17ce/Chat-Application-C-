@@ -3,10 +3,13 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <tchar.h>
+#include <vector>
+#include <string>
+#include "include/Client.h"
 
 class Server {
 public:
-	Server() : Socket{}, SocketAddress{} {
+	Server() : Socket{}, SocketAddress{}, ActiveClients{} {
 		Initialize();
 	}
 
@@ -15,14 +18,18 @@ public:
 		CleanUp();
 	}
 
-	void Listen(u_short PORT);
+	void Listen(const WCHAR* IPAddress, u_short PORT);
+	SOCKET AcceptClient();
+	void CloseClient(SOCKET Client);
+	bool ReceiveMessage(SOCKET Client);
 
 private:
 	SOCKET Socket;
 	sockaddr_in SocketAddress;
+	std::vector<SOCKET> ActiveClients;
 
 	void CreateSocket();
-	void CreateSocketAddress(u_short PORT);
+	void CreateSocketAddress(const WCHAR* IPAddress, u_short PORT);
 	void BindAddressToSocket();
 
 	void Initialize();

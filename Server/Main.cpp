@@ -5,6 +5,8 @@
 
 int main() {
 	auto ChatServer = std::make_unique<Server>();
-	ChatServer->Listen(17000U);
+	ChatServer->Listen(L"0.0.0.0", 17000U);
+	auto Client = ChatServer->AcceptClient();
+	ChatServer->ReceiveMessage(Client);
 	std::cin.get();
 }	
