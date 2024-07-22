@@ -1,5 +1,8 @@
 #include "include/Server.h"
+#include <thread>
+#include <algorithm>
 #include <iostream>
+#include <utility>
 
 void Server::Listen(const WCHAR* IPAddress, u_short PORT) {
 	CreateSocket();
@@ -22,30 +25,63 @@ SOCKET Server::AcceptClient() {
 		return -1;
 	}
 
-	//TO-Do : Get Client Name
-	ActiveClients.emplace_back(ClientSocket);
+	char Buffer[4096];
+	int BytesReceived = recv(ClientSocket, Buffer, sizeof(Buffer), 0);
 
-	return ActiveClients.back();
+	if (BytesReceived <= 0) {
+		int errorCode = WSAGetLastError();
+		std::cout << "Client Connection Closed..." << std::endl;
+		closesocket(ClientSocket);
+	}
+
+	std::string Name(Buffer, BytesReceived);
+	ActiveClients.insert({ ClientSocket, Name });
+
+	std::cout << "Connection Established with " << Name << "..." << std::endl;
+
+	std::thread ReceiveThread(&Server::ReceiveMessages, this, ClientSocket);
+	ReceiveThread.detach();
+
+	return ClientSocket;
 }
 
 void Server::CloseClient(SOCKET Client) {
-	auto it = std::find(ActiveClients.begin(), ActiveClients.end(), Client);
-	ActiveClients.erase(it);
+	closesocket(Client);
+	auto it = ActiveClients.find(Client);
+	if (it != ActiveClients.end()) {
+		ActiveClients.erase(it);
+	}
 }
 
-bool Server::ReceiveMessage(SOCKET Client) {
+void Server::ReceiveMessages(SOCKET Client) {
 	char Buffer[4096];
-	int BytesReceived = recv(Client, Buffer, sizeof(Buffer), 0);
-	std::cout<<"Bytes : " << BytesReceived << std::endl;
-	if (BytesReceived < 0) {
-		std::cout << "Error Receiving Message..."<<std::endl;
-		return false;
-	}
 
-	std::string Message(Buffer, BytesReceived);
-	std::cout<<Message<<std::endl;
-	CloseProgram();
-	return true;
+	while (true) {
+		int BytesReceived = recv(Client, Buffer, sizeof(Buffer), 0);
+
+		if (BytesReceived <= 0) {
+			int errorCode = WSAGetLastError();
+			std::cout << "Connection With " << ActiveClients[Client] << " is Closed..." << std::endl;
+			CloseClient(Client);
+			break;
+		}
+
+		std::string TempMessage(Buffer, BytesReceived);
+		std::string Message = ActiveClients[Client] + " : " + TempMessage;
+		std::cout<< Message <<std::endl;
+
+		for (const auto& TempClient : ActiveClients) {
+			if (TempClient.first != Client) {
+				int ReturnCode = send(TempClient.first, Message.c_str(), Message.length(), 0);
+
+				if (ReturnCode == SOCKET_ERROR) {
+					std::cout << "Sending message to " + TempClient.second + "Failed...\n";
+					std::cout << "Closing Connection With " + TempClient.second + "...\n";
+					CloseClient(TempClient.first);
+				}
+			}
+		}
+	}
 }
 
 void Server::CreateSocket() {

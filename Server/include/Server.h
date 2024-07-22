@@ -3,7 +3,7 @@
 #include <WinSock2.h>
 #include <WS2tcpip.h>
 #include <tchar.h>
-#include <vector>
+#include <map>
 #include <string>
 #include "include/Client.h"
 
@@ -21,12 +21,12 @@ public:
 	void Listen(const WCHAR* IPAddress, u_short PORT);
 	SOCKET AcceptClient();
 	void CloseClient(SOCKET Client);
-	bool ReceiveMessage(SOCKET Client);
+	void ReceiveMessages(SOCKET Client);
 
 private:
 	SOCKET Socket;
 	sockaddr_in SocketAddress;
-	std::vector<SOCKET> ActiveClients;
+	std::map<SOCKET, std::string> ActiveClients;
 
 	void CreateSocket();
 	void CreateSocketAddress(const WCHAR* IPAddress, u_short PORT);
