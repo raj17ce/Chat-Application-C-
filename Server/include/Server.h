@@ -5,11 +5,12 @@
 #include <tchar.h>
 #include <map>
 #include <string>
+#include "include/ThreadPool.h"
 #include "include/Client.h"
 
 class Server {
 public:
-	Server() : Socket{}, SocketAddress{}, ActiveClients{} {
+	Server() : Socket{}, SocketAddress{}, ActiveClients{}, Pool{8} {
 		Initialize();
 	}
 
@@ -27,6 +28,7 @@ private:
 	SOCKET Socket;
 	sockaddr_in SocketAddress;
 	std::map<SOCKET, std::string> ActiveClients;
+	ThreadPool Pool;
 
 	void CreateSocket();
 	void CreateSocketAddress(const WCHAR* IPAddress, u_short PORT);

@@ -39,8 +39,9 @@ SOCKET Server::AcceptClient() {
 
 	std::cout << "Connection Established with " << Name << "..." << std::endl;
 
-	std::thread ReceiveThread(&Server::ReceiveMessages, this, ClientSocket);
-	ReceiveThread.detach();
+	/*std::thread ReceiveThread(&Server::ReceiveMessages, this, ClientSocket);
+	ReceiveThread.detach();*/
+	Pool.ExecuteTask(std::bind(&Server::ReceiveMessages, this, std::placeholders::_1), ClientSocket);
 
 	return ClientSocket;
 }
